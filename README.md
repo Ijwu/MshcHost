@@ -1,6 +1,6 @@
-# MshcHost
+ # MshcHost
 
-My most recent 5AM project.
+My most recent 5 AM project.
 
 A project made to unzip and host an MSHC help file as a website. Inspired by Progress' (Telerik's) awful Sitefinity API documentation file which doesn't even work in the Visual Studio help system. 
 
