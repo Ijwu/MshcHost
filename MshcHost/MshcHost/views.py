@@ -3,35 +3,40 @@ Routes and views for the flask application.
 """
 
 from datetime import datetime
-from flask import render_template
+from flask import Response
 from MshcHost import app
+from regex import finditer
+from MshcHost.index import index as indie
+from os import getcwd	
+from os.path import join
+from MshcHost import cache as path
 
-@app.route('/')
-@app.route('/home')
-def home():
-    """Renders the home page."""
-    return render_template(
-        'index.html',
-        title='Home Page',
-        year=datetime.now().year,
-    )
+regex_string = 'href="(ms-xhelp:///\?id=(.*?))"'
+current_dir = getcwd()
 
-@app.route('/contact')
-def contact():
-    """Renders the contact page."""
-    return render_template(
-        'contact.html',
-        title='Contact',
-        year=datetime.now().year,
-        message='Your contact page.'
-    )
+def _get_file_from_filecache(filename):
+	return join(path, filename)
 
-@app.route('/about')
-def about():
-    """Renders the about page."""
-    return render_template(
-        'about.html',
-        title='About',
-        year=datetime.now().year,
-        message='Your application description page.'
-    )
+def _file_contents(path):
+	with open(path, "rb") as f:
+		text = f.read().decode("utf8", "ignore")
+		return text
+
+def _perform_transforms(contents):
+	matches = finditer(regex_string, contents)
+	for match in matches:
+		matched_id = match.group(2)
+		contents = contents.replace(match.group(1), indie.get(matched_id, "#"))
+	contents = contents.replace('rel="styleSheet"', 'rel="stylesheet"')
+	return contents
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def main(path):
+	if path.endswith(".html"):
+		return _perform_transforms(_file_contents(_get_file_from_filecache(path))) 
+	elif path.endswith(".css"):
+		content = _file_contents(_get_file_from_filecache(path))
+		return Response(content, mimetype="text/css")
+	else:
+		return _file_contents(_get_file_from_filecache(path))

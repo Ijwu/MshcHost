@@ -28,6 +28,9 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="MshcHost\index.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="runserver.py" />
     <Compile Include="MshcHost\__init__.py" />
     <Compile Include="MshcHost\views.py" />
@@ -38,7 +41,6 @@
     <Folder Include="MshcHost\static\content\" />
     <Folder Include="MshcHost\static\fonts\" />
     <Folder Include="MshcHost\static\scripts\" />
-    <Folder Include="MshcHost\templates\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="requirements.txt" />
@@ -64,10 +66,6 @@
     <Content Include="MshcHost\static\scripts\respond.js" />
     <Content Include="MshcHost\static\scripts\respond.min.js" />
     <Content Include="MshcHost\static\scripts\_references.js" />
-    <Content Include="MshcHost\templates\about.html" />
-    <Content Include="MshcHost\templates\contact.html" />
-    <Content Include="MshcHost\templates\index.html" />
-    <Content Include="MshcHost\templates\layout.html" />
   </ItemGroup>
   <ItemGroup>
     <Interpreter Include="env\">
