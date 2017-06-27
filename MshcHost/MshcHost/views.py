@@ -1,42 +1,44 @@
-"""
-Routes and views for the flask application.
-"""
-
-from datetime import datetime
-from flask import Response
+from flask import Response, send_file
 from MshcHost import app
-from regex import finditer
-from MshcHost.index import index as indie
-from os import getcwd	
+from os import getcwd
 from os.path import join
 from MshcHost import cache as path
+from MshcHost.Transformations import HrefTransformation
+from MshcHost.index import index
 
-regex_string = 'href="(ms-xhelp:///\?id=(.*?))"'
 current_dir = getcwd()
+transformations = [HrefTransformation(index)]
 
-def _get_file_from_filecache(filename):
-	return join(path, filename)
 
-def _file_contents(path):
-	with open(path, "rb") as f:
-		text = f.read().decode("utf8", "ignore")
-		return text
+def _get_file_from_filecache(filename: str) -> str:
+    return join(path, filename)
 
-def _perform_transforms(contents):
-	matches = finditer(regex_string, contents)
-	for match in matches:
-		matched_id = match.group(2)
-		contents = contents.replace(match.group(1), indie.get(matched_id, "#"))
-	contents = contents.replace('rel="styleSheet"', 'rel="stylesheet"')
-	return contents
+
+def _file_contents(path: str) -> str:
+    with open(path, "rb") as f:
+        text = f.read().decode("utf8", "ignore")
+        return text
+
+
+def _perform_transforms(contents: str) -> str:
+    for transform in transformations:
+        contents = transform.Transform(contents)
+    return contents
+
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
-def main(path):
-	if path.endswith(".html"):
-		return _perform_transforms(_file_contents(_get_file_from_filecache(path))) 
-	elif path.endswith(".css"):
-		content = _file_contents(_get_file_from_filecache(path))
-		return Response(content, mimetype="text/css")
-	else:
-		return _file_contents(_get_file_from_filecache(path))
+def main(path: str) -> str:
+    if path == "":
+        path = "topic1.html"
+
+    if path.endswith(".html"):
+        return _perform_transforms(
+            _file_contents(
+                _get_file_from_filecache(path)
+            ))
+    elif path.endswith(".css"):
+        content = _file_contents(_get_file_from_filecache(path))
+        return Response(content, mimetype="text/css")
+    else:
+        return send_file(_get_file_from_filecache(path))

@@ -7,9 +7,14 @@ from os import environ, getcwd, mkdir
 from os.path import join, isdir, basename, splitext
 
 import zipfile
-import MshcHost.index
+import MshcHost.index as index
+from logging import StreamHandler
+from sys import stdout
+
 
 app = Flask(__name__)
+app.logger.setLevel(10)  # debug
+app.logger.addHandler(StreamHandler(stdout))
 
 cache_path = join(getcwd(), "filecache")
 if not isdir(cache_path):
@@ -21,23 +26,27 @@ except ValueError:
     path = default_path
 cache = join(cache_path, splitext(basename(path))[0])
 
+
 def unzip_mshc(path, cache_path):
-    print("unzipping, this might take forever or not work")
+    app.logger.info("Unzipping MSHC content. This may take a while.")
     final_cache = join(cache_path, splitext(basename(path))[0])
     if not isdir(final_cache):
         mkdir(final_cache)
     with zipfile.ZipFile(path) as zip:
         zip.extractall(final_cache)
 
+
 def init_index(mshc_path):
     index.initialize(mshc_path)
+
 
 def initialize():
     if not isdir(cache):
         unzip_mshc(path, cache_path)
     init_index(cache)
 
-print("initializing")
+
+app.logger.info("Initializing...")
 initialize()
 
 from MshcHost import views

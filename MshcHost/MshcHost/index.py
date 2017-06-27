@@ -1,14 +1,17 @@
 from os import listdir
-from regex import search
+from re import search
 from os.path import join, isfile
 from tqdm import tqdm
 from threading import Thread
 from traceback import format_exc
+from logging import getLogger
 import pickle
 
 index = None
 regex_string = '<meta name="Microsoft.Help.Id" content="(.*?)" />'
 threads = 8
+logger = getLogger("MshcHost")
+
 
 def _index_extracts(path, regex_string, files, tq, ind):
     try:
@@ -20,43 +23,47 @@ def _index_extracts(path, regex_string, files, tq, ind):
                         id = matching.group(1)
                         ind[id] = file
                         tq.update()
-    except Exception as e:
-        ind["error"+path] = Exception(format_exc())
+    except Exception:
+        ind["error" + path] = Exception(format_exc())
+
 
 def initialize(path):
-    global index, threads
-    print("indexing")
+    global index, threads, logger
+    logger.info("Indexing...")
     if index is not None:
         raise RuntimeError("Index was already initialized.")
     pickle_file = join(path, "index.pickle")
     if isfile(pickle_file):
         index = pickle.load(open(pickle_file, "rb"))
-        print("found a pickled index, yummy")
+        logger.info("Found pickled index. Returning.")
         return
-    print("no pickle found, doing it the hard way")
+    logger.info("No pickled index found.")
     index = {}
     htmlfiles = [x for x in listdir(path) if x[-5:] == ".html"]
     tq = tqdm(total=len(htmlfiles))
-    chunks = _chunks(htmlfiles, threads)
+    chunks = _chunks(htmlfiles, len(htmlfiles) // threads)
     threadList = []
     for chunk in chunks:
-        threadList.append(Thread(target=_index_extracts, args=(path, regex_string, chunk, tq, index)))
+        threadList.append(Thread(target=_index_extracts, args=(
+            path, regex_string, chunk, tq, index)))
     for thread in threadList:
         thread.start()
     for thread in threadList:
         thread.join()
     tq.close()
-    print("ok done indexing. gonna pickle this shit")
+    logger.info("Indexing finished. Pickling index for later.")
     pickle.dump(index, open(pickle_file, "wb"))
-    for errorkey in index.keys():
-        if errorkey.startswith("error"):
-            print(errorkey, index[errorkey])
+    if any(filter(lambda x: x.startswith("error"), index.keys())):
+        logger.warn("Logging errors generated from indexing.")
+        for errorkey in index.keys():
+            if errorkey.startswith("error"):
+                logger.warn(
+                    f"Error Key: '{errorkey}' \
+                    Error Value: '{index[errorkey]}'")
 
-#https://stackoverflow.com/a/312464
+
+# https://stackoverflow.com/a/312464
 def _chunks(l, n):
     """Yield successive n-sized chunks from l."""
     for i in range(0, len(l), n):
         yield l[i:i + n]
-
-if __name__ == "__main__":
-    index_extracts(r"C:\Users\Hussein\Desktop\Sitefinity API Doc", regex_string)
